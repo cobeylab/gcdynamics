@@ -18,13 +18,13 @@ git clone https://github.com/cobeylab/gcdynamics.git
 cd gcdynamics
 ```
 
-To download all necessary libraries and build the 
+To download all necessary libraries and build the executable, run:
 
 ```sh
 ./make.py
 ```
 
-and an executable named `gcdynamics` will appear in the `bin/` directory.
+The executable `gcdynamics` will appear in the `bin/` directory.
 
 ## Performing a single model run
 
