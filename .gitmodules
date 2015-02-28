@@ -1,0 +1,12 @@
+[submodule "zppjson"]
+	path = zppjson
+	url = https://bitbucket.org/edbaskerville/zppjson.git
+[submodule "zppdb"]
+	path = zppdb
+	url = https://bitbucket.org/edbaskerville/zppdb.git
+[submodule "zppsim"]
+	path = zppsim
+	url = https://bitbucket.org/edbaskerville/zppsim.git
+[submodule "libjson"]
+	path = libjson
+	url = https://github.com/vincenthz/libjson
