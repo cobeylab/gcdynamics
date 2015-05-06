@@ -14,25 +14,28 @@ class Epitope
 public:
 	Epitope(
 		SimParameters & params,
-		Antigen * antigenPtr, zppsim::rng_t & rng, int64_t row, int64_t col, double energyMean,
+		Antigen * antigenPtr,
+		uint32_t neighborSeed,
+		uint32_t energySeed,
+		zppsim::rng_t & rng, int64_t row, int64_t col, double energyMean,
 		zppdb::Database * dbPtr,
 		zppdb::Table<AntigenNeighborRow> * neighborTablePtr, zppdb::Table<AntigenEnergyRow> * energyTablePtr
 	);
 	void mutate(zppsim::rng_t & rng);
 	
-	/*double getLogAffinity(BCell const & bCell);
-	double getLogAffinity(PlasmaCell const & pCell);*/
 	double getEnergy(
-		BCell const & cell, zppsim::rng_t & rng
+		BCell const & cell
 	);
 	double getEnergy(
-		BCell const & cell, uint32_t locus, zppsim::rng_t & rng
+		BCell const & cell, uint16_t locus
 	);
 	
 	void verifyNeighbors();
 	void verifyEnergy();
 	
-	int64_t const nLoci;
+	std::vector<uint8_t> const energySeedBytes;
+	
+	uint16_t const nLoci;
 	int64_t const nInteractions;
 	int64_t const alphabetSize;
 	std::string const alphabet;
@@ -54,7 +57,7 @@ private:
 	
 	std::vector<std::vector<uint32_t>> neighbors;
 	std::vector<std::vector<Sequence>> activeNeighborSeqs;
-	std::vector<std::unordered_map<Sequence, double, HashSequence>> energyMaps;
+//	std::vector<std::unordered_map<Sequence, double, HashSequence>> energyMaps;
 	
 	Antigen * antigenPtr;
 	zppdb::Database * dbPtr;

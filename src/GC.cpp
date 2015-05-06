@@ -28,7 +28,9 @@ static vector<double> normalizeExp(vector<double> const & logVals)
 	}
 	if(maxLogVal > -std::numeric_limits<double>::infinity()) {
 		for(int64_t i = 0; i < vals.size(); i++) {
-			vals[i] -= maxLogVal;
+			if(!std::isinf(vals[i])) {
+				vals[i] -= maxLogVal;
+			}
 		}
 	}
 	for(int64_t i = 0; i < vals.size(); i++) {
@@ -41,11 +43,14 @@ GC::GC(Host & host, vector<BCell *> const & initCells, int64_t id, zppsim::rng_t
 	hostPtr(&host), dbmPtr(host.dbmPtr),
 	p(host.p), id(id), alive(true)
 {
+	cerr << "GC " << id << "..." << endl;
+	
 	cells.reserve(p->gcs.nTotalCells);
 	for(BCell * cellPtr : initCells) {
+		cerr << "  " << cellPtr->toString(p->sequences.alphabet) << endl;
+		
 		BCell * newCellPtr = new BCell(host.getNextCellId(), *cellPtr);
 		host.writeBCellToDatabase(*this, "gcfd_seed", *newCellPtr);
-		host.writeAffinityToDatabase("gcfd_seed", *newCellPtr, rng);
 		cells.push_back(unique_ptr<BCell>(newCellPtr));
 	}
 }
@@ -93,23 +98,21 @@ void GC::runRound(
 	cells.clear();
 	for(BCell * newCell : newCells) {
 		cells.emplace_back(newCell);
+		if(p->gcs.shouldTerminateBelowThreshold) {
+			double cellEffLogAff = host.maxEffectiveLogAffinity(*cells.back(), rng);
+			if(cellEffLogAff < p->gcs.logAffinityTerminationThreshold) {
+//				cerr << "CELL BELOW THRESHOLD" << endl;
+				cells.pop_back();
+			}
+		}
 	}
 	
 	// Terminate if the maximum affinity across all cells, across all epitopes, is less than the termination threshold.
-	if(p->gcs.shouldTerminateBelowThreshold) {
-		double maxEffLogAff = -std::numeric_limits<double>::infinity();
-		for(auto & cell : cells) {
-			double cellEffLogAff = host.maxEffectiveLogAffinity(*cell, rng);
-			if(cellEffLogAff > maxEffLogAff) {
-				maxEffLogAff = cellEffLogAff;
-			}
-		}
-		
-		if(maxEffLogAff < p->gcs.logAffinityTerminationThreshold) {
-			fprintf(stderr, "GC %llu terminating (max affinity below threshold)\n", id);
-			alive = false;
-			return;
-		}
+	if(p->gcs.shouldTerminateBelowThreshold && cells.size() == 0) {
+//		cerr << "NO NEW CELLS!" << endl;
+		fprintf(stderr, "GC %llu terminating (all cells below threshold)\n", id);
+		alive = false;
+		return;
 	}
 	
 	// Choose cells for memory export based on pMemExport (which is calculated based on the round number in Host.cpp).
@@ -143,6 +146,7 @@ std::vector<BCell *> GC::sampleNewCells(int64_t nCells, int64_t maxOffspring, Ho
 		parentLogProbs[i] = host.maxEffectiveLogAffinity(*cells[i], rng);
 //		cerr << "parent log prob " << i << ": " << parentLogProbs[i] << endl;
 	}
+	
 	vector<double> parentProbs = normalizeExp(parentLogProbs);
 	for(int64_t i = 0; i < cells.size(); i++) {
 //		cerr << "parent rel. prob " << i << ": " << parentProbs[i] << endl;
@@ -158,8 +162,8 @@ std::vector<BCell *> GC::sampleNewCells(int64_t nCells, int64_t maxOffspring, Ho
 			host.getNextCellId(), *cells[index], rng, p->gcs.pMutation,
 			host.seqCache
 		);
-		host.writeBCellToDatabase(*this, "gcfd", *newCellPtr);
-		host.writeAffinityToDatabase("gcfd", *newCellPtr, rng);
+//		host.writeBCellToDatabase(*this, "gcfd", *newCellPtr);
+//		host.writeAffinityToDatabase("gcfd", *newCellPtr, rng);
 		newCells.push_back(newCellPtr);
 		
 		offspringCounts[index] += 1;
@@ -197,8 +201,8 @@ std::vector<BCell *> GC::sampleNewCellsNullModel(int64_t nCells, int64_t maxOffs
 			host.getNextCellId(), *cells[parentIndex], rng, p->gcs.pMutation,
 			host.seqCache
 		);
-		host.writeBCellToDatabase(*this, "gcfd", *newCellPtr);
-		host.writeAffinityToDatabase("gcfd", *newCellPtr, rng);
+//		host.writeBCellToDatabase(*this, "gcfd", *newCellPtr);
+//		host.writeAffinityToDatabase("gcfd", *newCellPtr, rng);
 		newCells.push_back(newCellPtr);
 		
 		offspringCounts[parentIndex] += 1;
@@ -240,7 +244,12 @@ void GC::writeEffectiveAffinityToDatabase(
 	
 	EffectiveAffinityRow row;
 	row.infection_id = antigen.id;
-	row.gc_round = round;
+	if(round == -1) {
+		row.gc_round.setNull();
+	}
+	else {
+		row.gc_round = round;
+	}
 	for(auto & cellUPtr : cells) {
 		row.cell_id = cellUPtr->getId();
 		for(int64_t i = 0; i < p->epitopes.rows; i++) {

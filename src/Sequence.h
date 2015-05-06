@@ -121,6 +121,23 @@ public:
 		cacheHash(bits);
 	}
 	
+	Sequence(
+		uint8_t alphabetSize,
+		std::string const & seqStr,
+		std::unordered_map<char, uint8_t> & alphabetMap
+	) :
+		alphabetSize(alphabetSize), nLoci(uint16_t(seqStr.size())),
+		nBitsPerLocus(N_BITS_PER_LOCUS(alphabetSize)),
+		id(std::numeric_limits<uint32_t>::max()),
+		bits(nLoci*nBitsPerLocus)
+	{
+		assert(nBitsPerLocus != 0);
+		for(uint32_t i = 0; i < nLoci; i++) {
+			set(bits, i, alphabetMap[seqStr[i]]);
+		}
+		cacheHash(bits);
+	}
+	
 	uint8_t get(uint32_t const index) const
 	{
 		return get(bits, index);
@@ -243,8 +260,9 @@ public:
 			row.sequence = seqPtr->toString(alphabet);
 			db.insert(table, row);
 		}
-		
-		nextIdToWrite = idsToWrite.back() + 1;
+		if(!idsToWrite.empty()) {
+			nextIdToWrite = idsToWrite.back() + 1;
+		}
 	}
 	
 	void collectGarbage()

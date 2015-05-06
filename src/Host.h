@@ -63,6 +63,10 @@ private:
 	
 	/*** PRIVATE FUNCTIONS ***/
 	
+	std::vector<std::unique_ptr<GC>> createGCsFromSeeds(
+		Array<Array<String>> & seedStrs, zppsim::rng_t & rng
+	);
+	
 	std::vector<std::unique_ptr<GC>> createGCsOldMethod(
 		Antigen const & antigen, zppsim::rng_t & rng
 	);
@@ -91,6 +95,7 @@ private:
 	void writeNaiveBCellsToDatabase();
 	void writeNaiveBCellsToDatabase(std::vector<std::unique_ptr<BCell>> const & cells);
 	
+	void writeBCellsToDatabase(GC const & gc, std::string const & type, std::vector<std::unique_ptr<BCell>> const & bCells);
 	void writeBCellsToDatabase(GC const & gc, std::string const & type, std::vector<BCell *> const & bCells);
 	void writeBCellToDatabase(GC const & gc, std::string const & type, BCell const & bCell);
 	

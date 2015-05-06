@@ -18,11 +18,24 @@ using namespace zppsim;
 
 Simulation::Simulation(SimParameters * p) : p(p), db(p->dbFilename), dbm(db, p->dbTablesEnabled), nLoci(calculateNLoci(*p))
 {
-	// Generate random seed if set to 0
+	random_device rd;
+	uniform_int_distribution<uint32_t> ud;
+	
+	// Generate random seed if set to 0 or not present
 	if(!p->randomSeed.present() || p->randomSeed == 0) {
-		random_device rd;
-		uniform_int_distribution<uint32_t> ud(0, std::numeric_limits<uint32_t>::max());
 		p->randomSeed = ud(rd);
+	}
+	
+	// Generate neighbor/energy seeds if set to 0
+	for(int64_t i = 0; i < p->epitopes.rows; i++) {
+		for(int64_t j = 0; j < p->epitopes.cols; j++) {
+			if(!p->epitopes.neighborSeed[i][j].present() || p->epitopes.neighborSeed[i][j] == 0) {
+				p->epitopes.neighborSeed[i][j] = ud(rd);
+			}
+			if(!p->epitopes.energySeed[i][j].present() || p->epitopes.energySeed[i][j] == 0) {
+				p->epitopes.energySeed[i][j] = ud(rd);
+			}
+		}
 	}
 	
 	// Write params to meta table

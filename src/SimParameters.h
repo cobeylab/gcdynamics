@@ -139,6 +139,22 @@ ZPPJSON_DEFINE_TYPE(
 	((Int64)(nInteractions))
 	
 	/**
+		\brief The seed value used to uniquely determine the neighbors in the
+		energy landscape.
+		
+		If not present or zero, a random value will be generated.
+	*/
+	((Array<Array<Int64>>)(neighborSeed))
+	
+	/**
+		\brief The seed value used to uniquely determine the energies in the
+		energy landscape.
+		
+		If not present or zero, a random value will be generated.
+	*/
+	((Array<Array<Int64>>)(energySeed))
+	
+	/**
 		\brief The probability that an energy changes from the last antigen.
 		
 		This number affects the creation of epitopes during secondary
@@ -277,6 +293,12 @@ ZPPJSON_DEFINE_TYPE(
 		\brief Number of cells used to seed each GC.
 	*/
 	((Int64)(nSeedCells))
+	
+	/**
+		\brief Seed cells for each GC: if present, used instead of randomized
+		seed generation procedure.
+	*/
+	((Array<Array<String>>)(seedCells))
 	
 	/**
 		\brief Total number of cells in each GC after replication.

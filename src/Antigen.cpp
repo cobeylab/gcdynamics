@@ -34,12 +34,16 @@ Antigen::Antigen(
 	energyTablePtr(energyTablePtr),
 	epitopes(epitopeRows, vector<Epitope *>(epitopeCols, NULL))
 {
+	uniform_int_distribution<int64_t> energySeedGenerator;
+	
 	for(int64_t i = 0; i < epitopeRows; i++) {
 		for(int64_t j = 0; j < epitopeCols; j++) {
 			double energyMean = params.epitopes.energyMean[i][j];
 			Epitope * epitopePtr = new Epitope(
 				params,
 				this,
+				uint32_t(params.epitopes.neighborSeed[i][j]),
+				uint32_t(params.epitopes.energySeed[i][j]),
 				rng, i, j, energyMean,
 				dbPtr, neighborTablePtr, energyTablePtr
 			);
@@ -54,7 +58,7 @@ double Antigen::getLogAffinity(
 	BCell const & bCell, int64_t i, int64_t j,
 	zppsim::rng_t & rng
 ) const {
-	return affinityA - affinityB * epitopes[i][j]->getEnergy(bCell, rng);
+	return affinityA - affinityB * epitopes[i][j]->getEnergy(bCell);
 }
 
 double Antigen::getMaxLogAffinity(
@@ -82,7 +86,7 @@ double Antigen::getMaxLogAffinity(
 
 double Antigen::getEnergy(BCell const & bCell, int64_t i, int64_t j, zppsim::rng_t & rng) const
 {
-	return epitopes[i][j]->getEnergy(bCell, rng);
+	return epitopes[i][j]->getEnergy(bCell);
 }
 
 vector<vector<double>> Antigen::getEnergies(BCell const & bCell, zppsim::rng_t & rng) const
@@ -91,7 +95,7 @@ vector<vector<double>> Antigen::getEnergies(BCell const & bCell, zppsim::rng_t &
 	for(int64_t i = 0; i < epitopeRows; i++) {
 		energies.push_back(vector<double>(epitopeCols));
 		for(int64_t j = 0; j < epitopeCols; j++) {
-			energies[i][j] = epitopes[i][j]->getEnergy(bCell, rng);
+			energies[i][j] = epitopes[i][j]->getEnergy(bCell);
 		}
 	}
 	return energies;

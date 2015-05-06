@@ -136,12 +136,22 @@ void Host::runInfection(Antigen & antigen, zppsim::rng_t & rng)
 	
 	// Create GCs
 	vector<unique_ptr<GC>> gcs;
-	if(p->gcs.useOldSeedMethod) {
+	if(antigen.id == 0 && p->gcs.seedCells.present()) {
+		gcs = createGCsFromSeeds(p->gcs.seedCells, rng);
+	}
+	else if(p->gcs.useOldSeedMethod) {
 		gcs = createGCsOldMethod(antigen, rng);
 	}
 	else {
 		gcs = createGCsNewMethod(antigen, rng);
 	}
+	for(auto & gcPtr : gcs) {
+		writeAffinityToDatabase("gcfd_seed", gcPtr->cells, rng);
+		gcPtr->writeEffectiveAffinityToDatabase(
+			*this, antigen, -1, rng
+		);
+	}
+	
 	simPtr->db.commitWithRetry(0.1, 100, std::cerr);
 	
 	// Perform rounds of SHM, selection, and memory cell creation
@@ -182,7 +192,9 @@ void Host::runInfection(Antigen & antigen, zppsim::rng_t & rng)
 					pMemExport
 				);
 				
+				writeBCellsToDatabase(*gcs[i], "gcfd", gcs[i]->cells);
 				gcs[i]->writeGCFDCellsToDatabase(antigen, gcRound);
+				writeAffinityToDatabase("gcfd", gcs[i]->cells, rng);
 				gcs[i]->writeEffectiveAffinityToDatabase(
 					*this, antigen, gcRound, rng
 				);
@@ -250,6 +262,44 @@ void Host::runInfection(Antigen & antigen, zppsim::rng_t & rng)
 	writeAffinityToDatabase("memory", memoryBCells, rng);
 	writeAffinityToDatabase("plasma", plasmaCells, rng);
 	simPtr->db.commitWithRetry(0.1, 100, std::cerr);
+}
+
+vector<unique_ptr<GC>> Host::createGCsFromSeeds(Array<Array<String>> & seedStrs, zppsim::rng_t & rng)
+{
+	string alphabet = p->sequences.alphabet;
+	unordered_map<char, uint8_t> alphabetMap;
+	assert(p->sequences.alphabetSize < (1 << 8));
+	for(uint8_t i = 0; i < p->sequences.alphabetSize; i++) {
+		alphabetMap[alphabet[i]] = i;
+	}
+	
+	vector<unique_ptr<GC>> gcs(p->gcs.nGCs);
+	
+	assert(seedStrs.size() == p->gcs.nGCs);
+	for(int64_t gcId = 0; gcId < p->gcs.nGCs; gcId++) {
+		vector<unique_ptr<BCell>> tmpNaiveCells;
+		vector<BCell *> initBCells;
+		
+		assert(seedStrs[gcId].size() > 0);
+		for(int64_t j = 0; j < seedStrs[gcId].size(); j++) {
+			Sequence seedSeq(
+				p->sequences.alphabetSize,
+				seedStrs[gcId][j],
+				alphabetMap
+			);
+			tmpNaiveCells.emplace_back(new BCell(
+				getNextCellId(),
+				seedSeq,
+				seqCache
+			));
+			initBCells.push_back(tmpNaiveCells.back().get());
+		}
+		writeNaiveBCellsToDatabase(tmpNaiveCells);
+		gcs[gcId] = unique_ptr<GC>(new GC(*this, initBCells, gcId, rng));
+		writeGCSeedsToDatabase(*gcs[gcId], initBCells);
+	}
+	
+	return gcs;
 }
 
 vector<unique_ptr<GC>> Host::createGCsOldMethod(
@@ -656,6 +706,31 @@ void Host::writeBCellsToDatabase(
 		row.gc_round.setNull();
 	}
 	for(auto cellPtr : cells) {
+		row.cell_id = cellPtr->getId();
+		row.parent_id = cellPtr->getParentId();
+		row.sequence_id = cellPtr->getSequenceId();
+		dbmPtr->insert(dbmPtr->TABLE(bcells), row);
+	}
+}
+
+void Host::writeBCellsToDatabase(
+	GC const & gc, string const & type, vector<unique_ptr<BCell>> const & cells
+) {
+	if(!dbmPtr->tableExists(dbmPtr->bcellsTable)) {
+		return;
+	}
+	
+	BCellRow row;
+	row.type = type;
+	row.infection_id = antigenPtr->id;
+	row.gc_id = gc.id;
+	if(gcStarted) {
+		row.gc_round = gcRound;
+	}
+	else {
+		row.gc_round.setNull();
+	}
+	for(auto & cellPtr : cells) {
 		row.cell_id = cellPtr->getId();
 		row.parent_id = cellPtr->getParentId();
 		row.sequence_id = cellPtr->getSequenceId();

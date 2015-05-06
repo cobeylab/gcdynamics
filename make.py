@@ -90,7 +90,7 @@ if __name__ == '__main__':
 	
 	run_cmd('mkdir -p bin')
 	run_cmd('{0} -O3 -c libjson/json.c -o bin/libjson.o'.format(cCompiler))
-	run_cmd('{0} -O3 -lsqlite3 {1} {2} bin/libjson.o {3} -o bin/{4}'.format(
+	run_cmd('{0} -O3 -lcrypto -lsqlite3 {1} {2} bin/libjson.o {3} -o bin/{4}'.format(
 		cppCompiler,
 		flags,
 		' '.join(['-I{0}'.format(os.path.expanduser(x)) for x in includeDirs]),

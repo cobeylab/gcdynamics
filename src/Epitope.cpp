@@ -7,17 +7,22 @@
 #include <cassert>
 #include "zppsim_random.hpp"
 #include "Antigen.h"
+#include "shared.h"
 
 using namespace std;
 using namespace zppdb;
 
 Epitope::Epitope(
-	SimParameters & params, Antigen * antigenPtr, zppsim::rng_t & rng,
+	SimParameters & params, Antigen * antigenPtr,
+	uint32_t neighborSeed,
+	uint32_t energySeed,
+	zppsim::rng_t & rng,
 	int64_t row, int64_t col, double energyMean,
 	zppdb::Database * dbPtr,
 	zppdb::Table<AntigenNeighborRow> * neighborTablePtr, zppdb::Table<AntigenEnergyRow> * energyTablePtr
 ) :
 	antigenPtr(antigenPtr),
+	energySeedBytes(hostToNetworkBytes(energySeed)),
 	nLoci(antigenPtr->nLoci),
 	nInteractions(params.epitopes.nInteractions),
 	alphabetSize(params.sequences.alphabetSize),
@@ -31,27 +36,35 @@ Epitope::Epitope(
 	neighborTablePtr(neighborTablePtr),
 	energyTablePtr(energyTablePtr)
 {
+	assert(energySeed > 0);
+	assert(nLoci <= std::numeric_limits<uint16_t>::max());
+	
+	zppsim::rng_t rngNeighbors(neighborSeed);
+	
 	neighbors = vector<vector<uint32_t>>(nLoci, vector<uint32_t>(nInteractions));
 	activeNeighborSeqs = vector<vector<Sequence>>(nLoci);
-	energyMaps = vector<unordered_map<Sequence, double, HashSequence>>(nLoci);
+//	energyMaps = vector<unordered_map<Sequence, double, HashSequence>>(nLoci);
 	
 	for(uint32_t i = 0; i < nLoci; i++) {
 		// Uniformly chosen neighbors
-		vector<uint32_t> locusNeighbors = zppsim::drawUniformIndicesExcept(rng,
-			uint32_t(nLoci), uint32_t(nInteractions), i
+		vector<uint32_t> locusNeighbors = zppsim::drawUniformIndicesExcept(
+			rngNeighbors, uint32_t(nLoci), uint32_t(nInteractions), i
 		);
 		for(uint32_t j = 0; j < nInteractions; j++) {
 			neighbors[i][j] = locusNeighbors[j];
 		}
 		
-		// Energies generated as needed.
+		// Energies generated as needed (deterministically from energySeed)
 	}
 	
 	writeNeighborsToDatabase();
 }
 
 void Epitope::mutate(zppsim::rng_t & rng) {
-	energyCache.clear();
+	// TODO: define mutation under new energy scheme
+	assert(false);
+	
+	/*energyCache.clear();
 	
 	// Randomly mutate energies (among those that have been assigned)
 	// and neighbors assignments
@@ -94,7 +107,7 @@ void Epitope::mutate(zppsim::rng_t & rng) {
 				i, neighborIndexesToChange[j], newNeighbors[j]
 			);
 		}
-	}
+	}*/
 }
 
 void Epitope::writeNeighborsToDatabase()
@@ -151,25 +164,8 @@ void Epitope::writeEnergyToDatabase(
 	dbPtr->insert(*energyTablePtr, dbRow);
 }
 
-/*double Epitope::getLogAffinity(BCell const & bCell)
-{
-	double logK = p->epitopes.affinityA - p->epitopes.affinityB * getEnergy(bCell);
-	assert(logK > -std::numeric_limits<double>::infinity());
-	return logK;
-}
-
-double Epitope::getLogAffinity(PlasmaCell const & pCell)
-{
-//	if(pCell.matchesEpitope(row, col)) {
-		double logK = p->epitopes.affinityA - p->epitopes.affinityB * getEnergy(pCell);
-		assert(logK > -std::numeric_limits<double>::infinity());
-		return logK;
-//	}
-//	return -std::numeric_limits<double>::infinity();
-}*/
-
 double Epitope::getEnergy(
-	BCell const & cell, zppsim::rng_t & rng
+	BCell const & cell
 ) {
 	double energy = 0.0;
 	
@@ -179,8 +175,7 @@ double Epitope::getEnergy(
 	if(itr == energyCache.end()) {
 		// Add up (epistatic) energy component from each locus
 		for(uint32_t i = 0; i < nLoci; i++) {
-//			double energyi = getEnergy(cell, i, rng);
-			energy += getEnergy(cell, i, rng);
+			energy += getEnergy(cell, i);
 		}
 		energy /= sqrt(nLoci);
 		energy += energyMean;
@@ -190,37 +185,46 @@ double Epitope::getEnergy(
 		energy = itr->second;
 	}
 	assert(energy > -std::numeric_limits<double>::infinity());
+	
 	return energy;
 }
 
 double Epitope::getEnergy(
-	BCell const & cell, uint32_t locus, zppsim::rng_t & rng
+	BCell const & cell, uint16_t locus
 ) {
-	// Construct "neighbor sequence" key: amino acid at this locus and amino acids at neighbors
-	vector<uint8_t> seqVec(nInteractions + 1);
-	seqVec[0] = cell.get(locus);
+	// Construct "neighbor sequence" key of bytes:
+	// - energy seed (4 bytes, network byte order)
+	// - locus (2 bytes, network byte order)
+	// - amino acid at locus and each neighbor (1 byte each)
+	vector<uint8_t> keyBytes;
+	keyBytes.reserve(4 + 2 + 1 + nInteractions);
+	keyBytes.insert(keyBytes.end(), energySeedBytes.begin(), energySeedBytes.end());
+	keyBytes.push_back((locus & 0xFF00) >> 8);
+	keyBytes.push_back(locus & 0x00FF);
+	keyBytes.push_back(cell.get(locus));
 	for(uint32_t i = 0; i < nInteractions; i++) {
-		seqVec[i+1] = cell.get(neighbors[locus][i]);
+		keyBytes.push_back(cell.get(neighbors[locus][i]));
 	}
-	Sequence seq(alphabetSize, seqVec);
+	
+	return sha1Normal(keyBytes);
 	
 	// Get existing energy for key if present; generate if not present
-	double energy;
-	auto itr = energyMaps[locus].find(seq);
-	if(itr == energyMaps[locus].end()) {
-		energy = energyDist(rng);
-		energyMaps[locus][seq] = energy;
-		activeNeighborSeqs[locus].push_back(seq);
-		assert(energyMaps[locus].size() == activeNeighborSeqs[locus].size());
-		writeEnergyToDatabase(locus, seq, energy);
-	}
-	else {
-		energy = itr->second;
-	}
-	
-	assert(!std::isinf(energy));
-	
-	return energy;
+//	double energy;
+//	auto itr = energyMaps[locus].find(seq);
+//	if(itr == energyMaps[locus].end()) {
+//		energy = energyDist(rng);
+//		energyMaps[locus][seq] = energy;
+//		activeNeighborSeqs[locus].push_back(seq);
+//		assert(energyMaps[locus].size() == activeNeighborSeqs[locus].size());
+//		writeEnergyToDatabase(locus, seq, energy);
+//	}
+//	else {
+//		energy = itr->second;
+//	}
+//	
+//	assert(!std::isinf(energy));
+//	
+//	return energy;
 }
 
 
