@@ -1,0 +1,149 @@
+{
+	"dbFilename" : "db.sqlite",
+	"dbTablesEnabled" : {
+		"meta" : true,
+		
+		"gcStats" : false,
+		"naiveAlleles" : false,
+		
+		"bcells" : false,
+		"gcfdCells" : false,
+		
+		"gcSeedCandidates" : false,
+		"gcSeeds" : false,
+		
+		"affinity" : false,
+		"affinityStats" : false,
+	    
+        "effectiveAffinity" : true,
+        "plasmaConcentrations" : false,
+    
+        "antigenNeighbors" : false,
+        "antigenEnergies" : false
+	},
+	
+	"affinityOutputTypesEnabled" : {		
+		"naive" : false,
+		"gcfd" : true,
+		"gcfd_seed" : true,
+		"memory" : true,
+		"plasma" : true
+	},
+	
+	"nBCellsNaive" : 1000,
+	
+	"sequences" : {
+		"alphabetSize" : 5,
+		"alphabet" : "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!",
+		"chains" : [
+			{
+				"truncatedLength" : 30,
+				"segments" : [
+					{
+						"type" : "ALLELE",
+						"alleleDistribution" : [10.0, 9.11111111111111, 8.222222222222221, 7.333333333333334, 6.444444444444445, 5.555555555555555, 4.666666666666667, 3.7777777777777786, 2.8888888888888893, 2.0, 1.951219512195122, 1.9024390243902438, 1.8536585365853657, 1.8048780487804879, 1.7560975609756098, 1.7073170731707317, 1.6585365853658536, 1.6097560975609757, 1.5609756097560976, 1.5121951219512195, 1.4634146341463414, 1.4146341463414633, 1.3658536585365852, 1.3170731707317072, 1.2682926829268293, 1.2195121951219512, 1.170731707317073, 1.1219512195121952, 1.0731707317073171, 1.024390243902439, 0.975609756097561, 0.9268292682926829, 0.8780487804878048, 0.8292682926829267, 0.7804878048780488, 0.7317073170731707, 0.6829268292682926, 0.6341463414634145, 0.5853658536585364, 0.5365853658536586, 0.4878048780487805, 0.4390243902439024, 0.3902439024390243, 0.3414634146341462, 0.29268292682926833, 0.24390243902439024, 0.19512195121951215, 0.14634146341463405, 0.09756097560975596, 0.04878048780487809],
+						"minLength" : 40,
+						"lengthDistribution" : [1]
+					},
+					{
+						"type" : "RANDOM_INSERT",
+						"lengthDistribution" : [20, 80, 20]
+					},
+					{
+						"type" : "ALLELE",
+						"alleleDistribution" : [18.0, 14.6, 11.2, 7.800000000000001, 4.4, 3.8260869565217392, 3.6521739130434785, 3.4782608695652173, 3.3043478260869565, 3.130434782608696, 2.9565217391304346, 2.782608695652174, 2.608695652173913, 2.4347826086956523, 2.2608695652173916, 2.0869565217391304, 1.9130434782608696, 1.7391304347826089, 1.5652173913043477, 1.391304347826087, 1.2173913043478262, 1.0434782608695654, 0.8695652173913047, 0.6956521739130435, 0.5217391304347827, 0.34782608695652195, 0.17391304347826075],
+						"minLength" : 6,
+						"lengthDistribution" : [1, 1, 0, 0, 0, 0, 1]
+					},
+					{
+						"type" : "RANDOM_INSERT",
+						"lengthDistribution" : [20, 80, 20]
+					},
+					{
+						"type" : "ALLELE",
+						"alleleDistribution" : [40, 30, 10, 9, 9, 2],
+						"minLength" : 15,
+						"lengthDistribution" : [1]
+					}
+				]
+			},
+			{
+				"truncatedLength" : 10,
+				"segments" : [
+					{
+						"type" : "ALLELE",
+						"alleleDistribution" : [12.0, 10.88888888888889, 9.777777777777779, 8.666666666666666, 7.555555555555555, 6.444444444444445, 5.333333333333333, 4.222222222222221, 3.1111111111111107, 2.0, 1.935483870967742, 1.870967741935484, 1.8064516129032258, 1.7419354838709677, 1.6774193548387097, 1.6129032258064515, 1.5483870967741935, 1.4838709677419355, 1.4193548387096775, 1.3548387096774195, 1.2903225806451613, 1.2258064516129032, 1.1612903225806452, 1.096774193548387, 1.032258064516129, 0.967741935483871, 0.903225806451613, 0.838709677419355, 0.7741935483870968, 0.7096774193548387, 0.6451612903225807, 0.5806451612903225, 0.5161290322580645, 0.4516129032258065, 0.3870967741935485, 0.3225806451612905, 0.25806451612903225, 0.19354838709677424, 0.12903225806451624, 0.06451612903225801],
+						"minLength" : 25,
+						"lengthDistribution" : [1]
+					},
+					{
+						"type" : "RANDOM_INSERT",
+						"lengthDistribution" : [0, 1]
+					},
+					{
+						"type" : "ALLELE",
+						"alleleDistribution" : [40, 30, 15, 14, 1],
+						"minLength" : 14,
+						"lengthDistribution" : [1]
+					}
+				]
+			}
+		]
+	},
+	
+	"epitopes" : {
+		"rows" : 3,
+		"cols" : 1,
+		"nInteractions" : 3,
+		"neighborSeed" : [[0], [0], [0]],
+		"energySeed" : [[0], [0], [0]],
+		"pEnergyMutation" : [[0.01],[0.01],[0.01]],
+		"pNeighborMutation" : [[0.0],[0.0],[0.0]],
+		"energyMean" : [[0.0],[0.0],[0.0]],
+		"affinityA" : 4.0,
+		"affinityB" : 1.0
+	},
+	
+	"gcs" : {
+		"nGCs" : 2,
+		"nRounds" : 10,
+		"roundDuration" : 0.5,
+		"useOldSeedMethod" : false,
+		"fNaiveSeed" : 0.1,
+		"seedExcludeMemory" : false,
+		"seedQuantileLower" : 0.8,
+		"seedQuantileUpper" : 0.9,
+		"pMutation" : 0.01,
+		"nSeedCells" : 1,
+		"nTotalCells" : 100,
+		"fWinners" : 0.5,
+		"exponentialGrowthActive" : true,
+		"nDivisionsPerRound" : 2,
+		"shouldTerminateBelowThreshold" : false,
+		"logAffinityTerminationThreshold" : 100.0,
+		"plasmaExportLogAffinityThreshold" : 0.5,
+		"pPlasmaExport" : 0.1,
+		"pMemoryExportFirstRound" : 0.09,
+		"pMemoryExportLastRound" : 0.01,
+		"alphaMasking" : 0.1
+	},
+	
+	"infections" : [
+		{
+			"antigenQuantity" : 1.0,
+			"delay" : 1.0
+		}
+	],
+	
+	"shortLivedPlasma" : {
+		"initialLogC" : 0.0,
+		"discardLogC" : -5.0,
+		"decayRate" : 0.85
+	},
+	
+	"longLivedPlasma" : {
+		"initialLogC" : 0.0,
+		"discardLogC" : -5.0,
+		"decayRate" : 0.999
+	}
+}
